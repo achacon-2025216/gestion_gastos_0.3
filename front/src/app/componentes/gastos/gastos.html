@@ -1,0 +1,188 @@
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <img src="/img/logo/logo_check.png" alt="GastoCheck" class="brand-logo">
+    </div>
+    <nav>
+      <a routerLink="/inicio-gastos">Inicio</a>
+      <a routerLink="/ingresos">Ingresos</a>
+      <a routerLink="/gastos" class="active" aria-current="page">Gastos</a>
+    </nav>
+    <div class="header-right">
+      <button class="search-btn" aria-label="Buscar gastos" (click)="busqueda.focus()">
+        <img src="/img/icon/icon_lupa.png" alt="" />
+      </button>
+      <details class="user-menu">
+        <summary class="user" aria-label="Abrir menú de usuario">
+          <div class="avatar">
+            <img src="/img/icon/icon_user.png" alt="" />
+          </div>
+          <div class="user-text">
+            <span class="u-label">User</span>
+            <span class="u-name">{{ username }}</span>
+          </div>
+        </summary>
+        <div class="user-menu__dropdown">
+          <button type="button" (click)="cerrarSesion()">Cerrar sesión</button>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <p *ngIf="errorMessage" role="alert" class="error-message">{{ errorMessage }}</p>
+  <div class="title-row">
+    <div>
+      <h1>Gestión de Egresos</h1>
+      <p class="subtitle">Registra y da seguimiento a cada salida de dinero registrada.</p>
+    </div>
+    <button class="btn-primary" (click)="openExpenseModal()">+ Nuevo gasto</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-top">
+        <span class="stat-label">Saldo Disponible</span>
+        <div class="stat-icon icon-green">
+          <img src="/img/icon/icon_verde_dinero.png" alt="Saldo disponible">
+        </div>
+      </div>
+      <div class="stat-value positive">Q {{ saldoDisponible | number:'1.2-2' }}</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-top">
+        <span class="label-plain">Saldo por pagar</span>
+        <div class="stat-icon icon-red">
+          <img src="/img/icon/icon_rojo_dinero.png" alt="Saldo por pagar">
+        </div>
+      </div>
+      <div class="stat-value debt">Q {{ saldoPorPagar | number:'1.2-2' }}</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-top">
+        <span class="stat-label">Facturas</span>
+        <div class="stat-icon icon-amber">
+          <img src="/img/icon/icon_negro_factura.png" alt="Facturas">
+        </div>
+      </div>
+      <div class="stat-value">{{ movimientos.length }}</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="panel">
+      <h2>Movimientos registrados</h2>
+      <p class="desc">Solo se muestran gastos; los ingresos viven en su propia vista.</p>
+      <div class="filters">
+        <input #busqueda aria-label="Buscar por descripción" type="text" placeholder="Buscar por descripción..." [(ngModel)]="searchText">
+        <select aria-label="Filtrar por categoría" [(ngModel)]="categoryFilter">
+          <option value="">Todas las categorías</option>
+          <option *ngFor="let categoria of categoriasDisponibles" [value]="categoria">{{ categoria }}</option>
+        </select>
+      </div>
+      <div class="table-scroll"><table>
+        <thead>
+          <tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th style="text-align:right">Monto</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mov of filteredMovimientos()">
+            <td>{{ mov.fecha }}</td>
+            <td>{{ mov.descripcion }}</td>
+            <td><span class="tag" [ngClass]="tagClass(mov.categoria)">{{ mov.categoria }}</span></td>
+            <td class="amount">-Q {{ mov.monto | number:'1.2-2' }}</td>
+            <td><button type="button" class="del" (click)="eliminarMovimiento(mov)" [attr.aria-label]="'Eliminar ' + mov.descripcion">&#10005;</button></td>
+          </tr>
+        <tr *ngIf="filteredMovimientos().length === 0"><td colspan="5" class="empty">No hay gastos que mostrar.</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div>
+      <div class="panel" style="margin-bottom:20px;">
+        <h2>Transferencias</h2>
+        <p class="desc">Envía dinero a otra cuenta o paga un servicio directo desde aquí.</p>
+        <button class="btn-primary" style="width:100%;margin-bottom:18px;" (click)="openTransferModal()">↔ Transferir o pagar</button>
+        <p class="desc" *ngIf="!transferencias.length">Todavía no hay transferencias ni pagos.</p><div class="transfer-list">
+          <div class="transfer-item" *ngFor="let t of transferencias">
+            <div class="t-icon">↗</div>
+            <div class="t-info">
+              <div class="t-name">{{ t.nombre }}</div>
+              <div class="t-date">{{ t.fecha }}</div>
+            </div>
+            <div class="t-amount">-Q {{ t.monto | number:'1.2-2' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Gasto por categoría</h2>
+        <p class="desc">Distribución de tus salidas de dinero registradas.</p>
+        <p class="desc" *ngIf="!categorias.length">Registra un gasto para ver su distribución.</p><div class="cats">
+          <div class="cat-row" *ngFor="let c of categorias">
+            <div class="cat-top"><span class="name">{{ c.nombre }}</span><span>{{ c.porcentaje }}%</span></div>
+            <div class="cat-track"><div class="cat-fill" [style.width.%]="c.porcentaje" [style.background]="c.color"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal: nuevo gasto -->
+<div class="modal-overlay" [class.open]="showExpenseModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Registrar movimiento">
+    <p *ngIf="errorMessage" role="alert" class="error-message">{{ errorMessage }}</p>
+    <div class="modal-head">
+      <h3>Nuevo gasto</h3>
+      <button class="modal-close" aria-label="Cerrar" (click)="closeExpenseModal()">✕</button>
+    </div>
+    <form (ngSubmit)="submitExpense()">
+      <label for="iDesc">Descripción</label>
+      <input type="text" id="iDesc" name="descripcion" placeholder="Ej. Supermercado La Torre"
+             [(ngModel)]="newExpense.descripcion" required>
+      <label for="iSource">Categoría</label>
+      <input type="text" id="iSource" name="categoria" placeholder="Ej. Comida, renta o servicios"
+             [(ngModel)]="newExpense.categoria" required>
+      <label for="iAmount">Monto</label>
+      <input type="number" id="iAmount" name="monto" placeholder="0.00" min="0.01" step="0.01"
+             [(ngModel)]="newExpense.monto" required>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" (click)="closeExpenseModal()">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="saving">Agregar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: transferir / pagar -->
+<div class="modal-overlay" [class.open]="showTransferModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Registrar movimiento">
+    <p *ngIf="errorMessage" role="alert" class="error-message">{{ errorMessage }}</p>
+    <div class="modal-head">
+      <h3>Nueva transferencia</h3>
+      <button class="modal-close" aria-label="Cerrar" (click)="closeTransferModal()">✕</button>
+    </div>
+    <div class="modal-tabs">
+      <button type="button" class="modal-tab" [class.active]="transferType === 'Transferencia'"
+              (click)="setTransferType('Transferencia')">Transferir</button>
+      <button type="button" class="modal-tab" [class.active]="transferType === 'Pago'"
+              (click)="setTransferType('Pago')">Pagar</button>
+    </div>
+    <form (ngSubmit)="submitTransfer()">
+      <label>{{ transferType === 'Transferencia' ? 'Destinatario' : 'Servicio o comercio' }}</label>
+      <input type="text" name="nombreTransfer" [(ngModel)]="newTransfer.nombre"
+             [placeholder]="transferType === 'Transferencia' ? 'Nombre de la cuenta o persona' : 'Ej. Recibo de luz, EMPAGUA...'"
+             required>
+      <label>Monto</label>
+      <input type="number" name="montoTransfer" min="0.01" step="0.01" [(ngModel)]="newTransfer.monto" required>
+      <label>Nota (opcional)</label>
+      <input type="text" name="notaTransfer" [(ngModel)]="newTransfer.nota">
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" (click)="closeTransferModal()">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="saving">{{ transferType === 'Transferencia' ? 'Transferir' : 'Pagar' }}</button>
+      </div>
+    </form>
+  </div>
+</div>
