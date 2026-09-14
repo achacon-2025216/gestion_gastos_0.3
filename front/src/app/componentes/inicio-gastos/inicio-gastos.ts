@@ -66,6 +66,11 @@ export class InicioGastos
       .getCurrentUser();
   }
 
+  saving = false;
+  get fechaMaxima(): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Guatemala', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  }
+
   menuAbierto = false;
 
   menuSeleccionado =
@@ -124,9 +129,7 @@ export class InicioGastos
     descripcion: '',
 
     fecha:
-      new Date()
-        .toISOString()
-        .split('T')[0],
+      this.fechaMaxima,
 
     tipo: 'egreso',
 
@@ -180,6 +183,7 @@ export class InicioGastos
         },
 
         error: error => {
+          this.saving = false;
 
           console.error(
             'ERROR AL CARGAR GASTOS:',
@@ -483,15 +487,14 @@ export class InicioGastos
   }
 
   abrirFormulario(): void {
+    this.mostrarToast = false;
 
     this.nuevo = {
 
       descripcion: '',
 
       fecha:
-        new Date()
-          .toISOString()
-          .split('T')[0],
+        this.fechaMaxima,
 
       tipo: 'egreso',
 
@@ -520,6 +523,7 @@ export class InicioGastos
   }
 
   cerrarFormulario(): void {
+    this.mostrarToast = false;
 
     this.mostrarFormulario = false;
   }
@@ -576,6 +580,8 @@ export class InicioGastos
    * Guarda el tipo de movimiento seleccionado en el formulario.
    */
   guardarMovimiento(): void {
+    this.mostrarToast = false;
+    if (this.saving) return;
 
     this.errores = {};
 
@@ -593,6 +599,10 @@ export class InicioGastos
         'Selecciona una fecha.';
     }
 
+    if (this.nuevo.fecha > this.fechaMaxima) this.errores['fecha'] = 'No puedes registrar movimientos en fechas futuras.';
+    if (this.nuevo.tipo === 'egreso' && Math.round(Number(this.nuevo.monto) * 100) > Math.round(this.saldoRestante * 100)) {
+      this.errores['monto'] = 'Saldo insuficiente. Disponible: Q ' + this.saldoRestante.toFixed(2);
+    }
     if (!this.nuevo.categoria.trim()) {
 
       this.errores['categoria'] =
@@ -600,7 +610,7 @@ export class InicioGastos
     }
 
     if (
-      this.nuevo.monto === null ||
+      this.nuevo.monto === null || !Number.isFinite(Number(this.nuevo.monto)) ||
       this.nuevo.monto <= 0
     ) {
 
@@ -638,11 +648,13 @@ export class InicioGastos
       nuevoMovimiento
     );
 
+    this.saving = true;
     this.movimientosService
       .crear(nuevoMovimiento)
       .subscribe({
 
         next: movimiento => {
+          this.saving = false;
 
           console.log(
             'GASTO GUARDADO:',
@@ -655,7 +667,7 @@ export class InicioGastos
             )
           );
 
-          this.cerrarFormulario();
+          this.abrirFormulario();
 
           this.mostrarMensajeToast(
             'Movimiento agregado exitosamente'
@@ -665,6 +677,7 @@ export class InicioGastos
         },
 
         error: error => {
+          this.saving = false;
 
           console.error(
             'ERROR AL GUARDAR GASTO:',
@@ -672,7 +685,7 @@ export class InicioGastos
           );
 
           this.mostrarMensajeToast(
-            'No se pudo guardar el movimiento'
+            error.error?.error || 'No se pudo guardar el movimiento'
           );
         }
 
@@ -702,6 +715,7 @@ export class InicioGastos
         },
 
         error: error => {
+          this.saving = false;
 
           console.error(
             'ERROR AL ELIMINAR:',
@@ -709,7 +723,7 @@ export class InicioGastos
           );
 
           this.mostrarMensajeToast(
-            'No se pudo eliminar el movimiento'
+            error.error?.error || 'No se pudo eliminar el movimiento'
           );
         }
 

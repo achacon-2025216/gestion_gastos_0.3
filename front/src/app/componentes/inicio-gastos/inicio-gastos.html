@@ -116,13 +116,13 @@
         </div>
       </div>
 
-      <!-- 2. Saldo por pagar -->
+      <!-- 2. Gastos registrados -->
       <div class="metric-card">
         <div class="card-icon-badge badge-rojo">
-          <img src="/img/icon/icon_rojo_dinero.png" alt="Saldo por pagar" width="34" height="34" style="object-fit: contain;" />
+          <img src="/img/icon/icon_rojo_dinero.png" alt="Gastos registrados" width="34" height="34" style="object-fit: contain;" />
         </div>
         <div class="card-content">
-          <span>Saldo por pagar</span>
+          <span>Gastos registrados</span>
           <h2>{{ saldoPorPagar | currency:'Q ':'symbol':'1.2-2' }}</h2>
         </div>
       </div>
@@ -186,7 +186,7 @@
                 </span>
               </td>
               <td [class.monto--ingreso]="m.tipo === 'ingreso'" [class.monto--egreso]="m.tipo === 'egreso'">
-                {{ m.tipo === 'ingreso' ? '+' : '−' }}{{ m.monto | currency:'Q ':'symbol':'1.2-2' }}
+                {{ m.monto | currency:'Q ':'symbol':'1.2-2' }}
               </td>
               <td>
                 <button class="btn-icono" (click)="eliminarMovimiento(m.id)" aria-label="Eliminar movimiento">✕</button>
@@ -239,7 +239,7 @@
         }
 
         <label for="fecha">Fecha</label>
-        <input id="fecha" type="date" [(ngModel)]="nuevo.fecha" />
+        <input id="fecha" type="date" [max]="fechaMaxima" [(ngModel)]="nuevo.fecha" />
         @if (errores['fecha']) {
           <p class="error">{{ errores['fecha'] }}</p>
         }
@@ -276,15 +276,16 @@
         }
 
         <div class="modal__acciones">
-         <button class="btn btn--fantasma" (click)="cerrarFormulario()">Cancelar</button>
-         <button class="btn btn--primario" (click)="guardarMovimiento()">Guardar</button>
+         @if (mostrarToast) { <p role="status">{{ mensajeToast }}</p> }
+        <button class="btn btn--fantasma" (click)="cerrarFormulario()">Cancelar</button>
+         <button class="btn btn--primario" (click)="guardarMovimiento()" [disabled]="saving">Guardar</button>
         </div>
       </div>
     </div>
   }
 
   <!-- TOAST DE CONFIRMACIÓN -->
-  @if (mostrarToast) {
+  @if (mostrarToast && !mostrarFormulario) {
     <div class="toast">
       <span class="toast__icono">✓</span>
       <span>{{ mensajeToast }}</span>

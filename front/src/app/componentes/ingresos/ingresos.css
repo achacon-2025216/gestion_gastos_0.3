@@ -165,3 +165,10 @@ form input, form select{width:100%;border:1px solid var(--line);border-radius:9p
   .content{grid-template-columns:1fr;}
   nav{display:none;}
 }
+
+.operation-toast { position: fixed; bottom: 24px; right: 24px; z-index: 2000; max-width: calc(100vw - 48px); padding: 16px 22px; border-radius: 12px; background: #245d59; color: white; box-shadow: 0 4px 16px #0002; }
+.error-message { color: #b42318; background: #fff0ee; padding: 12px; border-radius: 8px; }
+
+.success-message { color: #166534; background: #ecfdf3; padding: 12px; border-radius: 8px; }
+
+.field-error { color: #ef4444; font-size: 12px; margin: -4px 0 0; }

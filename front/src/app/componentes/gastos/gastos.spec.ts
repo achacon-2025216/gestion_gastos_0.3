@@ -48,6 +48,8 @@ describe('Gastos', () => {
 
   it('guarda los nuevos gastos como egresos', () => {
     const component = TestBed.createComponent(Gastos).componentInstance;
+    component.ngOnInit();
+    movimientos.next([{ id: 1, fecha: '2026-01-10', descripcion: 'Sueldo', categoria: 'Salario', tipo: 'ingreso', monto: 1000 }]);
     component.newExpense = { descripcion: ' Mercado ', categoria: ' Comida ', monto: 25 };
     component.submitExpense();
     expect(servicio.crear).toHaveBeenCalledWith(expect.objectContaining({
@@ -59,6 +61,8 @@ describe('Gastos', () => {
   it('conserva el formulario cuando falla el guardado', () => {
     servicio.crear.mockReturnValueOnce(throwError(() => new Error('Sin conexión')));
     const component = TestBed.createComponent(Gastos).componentInstance;
+    component.ngOnInit();
+    movimientos.next([{ id: 1, fecha: '2026-01-10', descripcion: 'Sueldo', categoria: 'Salario', tipo: 'ingreso', monto: 1000 }]);
     component.showExpenseModal = true;
     component.newExpense = { descripcion: 'Mercado', categoria: 'Comida', monto: 25 };
     component.submitExpense();
@@ -66,5 +70,18 @@ describe('Gastos', () => {
     expect(component.newExpense.monto).toBe(25);
     expect(component.errorMessage).toBeTruthy();
     expect(component.saving).toBe(false);
+  });
+
+  it('bloquea gastos y transferencias que exceden el dinero disponible', () => {
+    const component = TestBed.createComponent(Gastos).componentInstance;
+    component.ngOnInit();
+    movimientos.next([{ id: 1, fecha: '2026-01-10', descripcion: 'Sueldo', categoria: 'Salario', tipo: 'ingreso', monto: 1000 }]);
+    component.newExpense = { descripcion: 'Compra', categoria: 'Otros', monto: 2000 };
+    component.submitExpense();
+    expect(servicio.crear).not.toHaveBeenCalled();
+    expect(component.errorMessage).toContain('Saldo insuficiente');
+    component.newTransfer = { nombre: 'Pago', nota: '', monto: 2000 };
+    component.submitTransfer();
+    expect(servicio.crear).not.toHaveBeenCalled();
   });
 });

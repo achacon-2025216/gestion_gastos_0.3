@@ -1,3 +1,4 @@
+<p *ngIf="errorMessage && !showIncomeModal && !showTransferModal" role="alert" class="error-message">{{ errorMessage }}</p>
 <div class="wrap">
 
   <header>
@@ -51,9 +52,9 @@
 
     <div class="stat-card">
       <div class="stat-top">
-        <span class="label-plain">Saldo por pagar</span>
+        <span class="label-plain">Gastos registrados</span>
         <div class="stat-icon icon-red">
-          <img src="/img/icon/icon_rojo_dinero.png" alt="Saldo por pagar">
+          <img src="/img/icon/icon_rojo_dinero.png" alt="Gastos registrados">
         </div>
       </div>
       <div class="stat-value debt">Q {{ saldoPorPagar | number:'1.2-2' }}</div>
@@ -90,7 +91,7 @@
             <td>{{ mov.fecha }}</td>
             <td>{{ mov.descripcion }}</td>
             <td><span class="tag" [ngClass]="tagClass(mov.fuente)">{{ mov.fuente }}</span></td>
-            <td class="amount">+Q {{ mov.monto | number:'1.2-2' }}</td>
+            <td class="amount">Q {{ mov.monto | number:'1.2-2' }}</td>
             <td class="del" (click)="eliminarMovimiento(mov)">✕</td>
           </tr>
         </tbody>
@@ -109,7 +110,7 @@
               <div class="t-name">{{ t.nombre }}</div>
               <div class="t-date">{{ t.fecha }}</div>
             </div>
-            <div class="t-amount">-Q {{ t.monto | number:'1.2-2' }}</div>
+            <div class="t-amount">Q {{ t.monto | number:'1.2-2' }}</div>
           </div>
         </div>
       </div>
@@ -136,19 +137,24 @@
       <h3>Nuevo ingreso</h3>
       <button class="modal-close" (click)="closeIncomeModal()">✕</button>
     </div>
-    <form (ngSubmit)="submitIncome()">
+    <p *ngIf="errorMessage" role="alert" class="error-message">{{ errorMessage }}</p>
+    <p *ngIf="successMessage" class="success-message" role="status">{{ successMessage }}</p>
+    <form novalidate (ngSubmit)="submitIncome()">
       <label for="iDesc">Descripción</label>
       <input type="text" id="iDesc" name="descripcion" placeholder="Ej. Sueldo quincena"
-             [(ngModel)]="newIncome.descripcion" required>
+             [(ngModel)]="newIncome.descripcion" [attr.aria-invalid]="errores['descripcion'] ? 'true' : null" [attr.aria-describedby]="errores['descripcion'] ? 'newIncome-descripcion-error' : null" required>
+      <p *ngIf="errores['descripcion']" class="field-error" id="newIncome-descripcion-error" role="alert">{{ errores['descripcion'] }}</p>
       <label for="iSource">Fuente</label>
       <input type="text" id="iSource" name="fuente" placeholder="Ej. Salario, ventas o negocio"
-             [(ngModel)]="newIncome.fuente" required>
+             [(ngModel)]="newIncome.fuente" [attr.aria-invalid]="errores['fuente'] ? 'true' : null" [attr.aria-describedby]="errores['fuente'] ? 'newIncome-fuente-error' : null" required>
+      <p *ngIf="errores['fuente']" class="field-error" id="newIncome-fuente-error" role="alert">{{ errores['fuente'] }}</p>
       <label for="iAmount">Monto</label>
       <input type="number" id="iAmount" name="monto" placeholder="0.00" min="0.01" step="0.01"
-             [(ngModel)]="newIncome.monto" required>
+             [(ngModel)]="newIncome.monto" [attr.aria-invalid]="errores['monto'] ? 'true' : null" [attr.aria-describedby]="errores['monto'] ? 'newIncome-monto-error' : null" required>
+      <p *ngIf="errores['monto']" class="field-error" id="newIncome-monto-error" role="alert">{{ errores['monto'] }}</p>
       <div class="modal-actions">
         <button type="button" class="btn-secondary" (click)="closeIncomeModal()">Cancelar</button>
-        <button type="submit" class="btn-primary">Agregar</button>
+        <button type="submit" [disabled]="saving" class="btn-primary">Agregar</button>
       </div>
     </form>
   </div>
@@ -167,19 +173,25 @@
       <button type="button" class="modal-tab" [class.active]="transferType === 'Pago'"
               (click)="setTransferType('Pago')">Pagar</button>
     </div>
-    <form (ngSubmit)="submitTransfer()">
+    <p *ngIf="errorMessage" role="alert" class="error-message">{{ errorMessage }}</p>
+    <p *ngIf="successMessage" class="success-message" role="status">{{ successMessage }}</p>
+    <form novalidate (ngSubmit)="submitTransfer()">
       <label>{{ transferType === 'Transferencia' ? 'Destinatario' : 'Servicio o comercio' }}</label>
-      <input type="text" name="nombreTransfer" [(ngModel)]="newTransfer.nombre"
+      <input type="text" name="nombreTransfer" [(ngModel)]="newTransfer.nombre" [attr.aria-invalid]="errores['nombre'] ? 'true' : null" [attr.aria-describedby]="errores['nombre'] ? 'newTransfer-nombre-error' : null"
              [placeholder]="transferType === 'Transferencia' ? 'Nombre de la cuenta o persona' : 'Ej. Recibo de luz, EMPAGUA...'"
              required>
+      <p *ngIf="errores['nombre']" class="field-error" id="newTransfer-nombre-error" role="alert">{{ errores['nombre'] }}</p>
       <label>Monto</label>
-      <input type="number" name="montoTransfer" min="0.01" step="0.01" [(ngModel)]="newTransfer.monto" required>
+      <input type="number" name="montoTransfer" min="0.01" step="0.01" [(ngModel)]="newTransfer.monto" [attr.aria-invalid]="errores['monto'] ? 'true' : null" [attr.aria-describedby]="errores['monto'] ? 'newTransfer-monto-error' : null" required>
+      <p *ngIf="errores['monto']" class="field-error" id="newTransfer-monto-error" role="alert">{{ errores['monto'] }}</p>
       <label>Nota (opcional)</label>
       <input type="text" name="notaTransfer" [(ngModel)]="newTransfer.nota">
       <div class="modal-actions">
         <button type="button" class="btn-secondary" (click)="closeTransferModal()">Cancelar</button>
-        <button type="submit" class="btn-primary">{{ transferType === 'Transferencia' ? 'Transferir' : 'Pagar' }}</button>
+        <button type="submit" [disabled]="saving" class="btn-primary">{{ transferType === 'Transferencia' ? 'Transferir' : 'Pagar' }}</button>
       </div>
     </form>
   </div>
 </div>
+
+<div *ngIf="successMessage && !showIncomeModal && !showTransferModal" class="operation-toast" role="status" aria-live="polite">{{ successMessage }}</div>

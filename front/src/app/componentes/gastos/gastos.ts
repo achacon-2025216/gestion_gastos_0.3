@@ -54,6 +54,21 @@ export class Gastos implements OnInit {
   username =
     this.authService.getCurrentUser()?.username ?? 'Usuario';
 
+  successMessage = '';
+  private noticeTimer?: ReturnType<typeof setTimeout>;
+
+  private mostrarExito(message: string): void {
+    this.errorMessage = '';
+    this.successMessage = message;
+    clearTimeout(this.noticeTimer);
+    this.noticeTimer = setTimeout(() => {
+      this.successMessage = '';
+      this.changeDetector.markForCheck();
+    }, 3000);
+    this.changeDetector.markForCheck();
+  }
+
+  errores: Record<string, string> = {};
   errorMessage = '';
   saving = false;
 
@@ -98,6 +113,7 @@ export class Gastos implements OnInit {
   };
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => clearTimeout(this.noticeTimer));
     this.movimientosService.movimientos$
       .pipe(
         takeUntilDestroyed(this.destroyRef)
@@ -124,7 +140,7 @@ export class Gastos implements OnInit {
 
       error: error => {
         this.saving = false;
-        this.errorMessage = 'No se pudo completar la operación. Inténtalo de nuevo.';
+        this.errorMessage = error.error?.error || 'No se pudo completar la operación. Inténtalo de nuevo.';
         this.changeDetector.markForCheck();
         console.error(
           'ERROR AL CARGAR EGRESOS:',
@@ -331,6 +347,9 @@ export class Gastos implements OnInit {
   }
 
   openExpenseModal(): void {
+    this.errores = {};
+    this.errorMessage = '';
+    this.successMessage = '';
     this.showExpenseModal = true;
   }
 
@@ -339,6 +358,9 @@ export class Gastos implements OnInit {
   }
 
   closeExpenseModal(): void {
+    this.errores = {};
+    this.errorMessage = '';
+    this.successMessage = '';
 
     this.showExpenseModal = false;
 
@@ -353,18 +375,22 @@ export class Gastos implements OnInit {
    * GUARDA UN EGRESO.
    */
   submitExpense(): void {
+    this.successMessage = '';
     if (this.saving) return;
     this.errorMessage = '';
 
     const monto = this.newExpense.monto;
 
-    if (
-      !this.newExpense.descripcion.trim() ||
-      !this.newExpense.categoria.trim() ||
-      !monto ||
-      !Number.isFinite(Number(monto)) ||
-      monto <= 0
-    ) {
+    this.errores = {};
+    if (!this.newExpense.descripcion.trim()) this.errores['descripcion'] = 'La descripción es obligatoria.';
+    if (!this.newExpense.categoria.trim()) this.errores['categoria'] = 'Escribe una categoría.';
+    if (!monto || !Number.isFinite(Number(monto)) || monto <= 0) {
+      this.errores['monto'] = 'Ingresa un monto válido mayor a 0.';
+    }
+    if (Object.keys(this.errores).length > 0) return;
+
+    if (Math.round(Number(monto) * 100) > Math.round(this.saldoDisponible * 100)) {
+      this.errorMessage = `Saldo insuficiente. Disponible: Q ${this.saldoDisponible.toFixed(2)}.`;
       return;
     }
 
@@ -405,13 +431,14 @@ export class Gastos implements OnInit {
 
           // El servicio publica el nuevo movimiento en movimientos$.
           this.saving = false;
-          this.closeExpenseModal();
+          this.newExpense = { descripcion: '', categoria: '', monto: null };
+          this.mostrarExito('Movimiento agregado exitosamente');
           this.changeDetector.markForCheck();
         },
 
         error: error => {
         this.saving = false;
-        this.errorMessage = 'No se pudo completar la operación. Inténtalo de nuevo.';
+        this.errorMessage = error.error?.error || 'No se pudo completar la operación. Inténtalo de nuevo.';
         this.changeDetector.markForCheck();
 
           console.error(
@@ -434,11 +461,11 @@ export class Gastos implements OnInit {
       .subscribe({
 
         // El servicio actualiza movimientos$ al completar la eliminación.
-        next: () => {},
+        next: () => this.mostrarExito('Movimiento eliminado'),
 
         error: error => {
         this.saving = false;
-        this.errorMessage = 'No se pudo completar la operación. Inténtalo de nuevo.';
+        this.errorMessage = error.error?.error || 'No se pudo completar la operación. Inténtalo de nuevo.';
         this.changeDetector.markForCheck();
 
           console.error(
@@ -450,10 +477,16 @@ export class Gastos implements OnInit {
   }
 
   openTransferModal(): void {
+    this.errores = {};
+    this.errorMessage = '';
+    this.successMessage = '';
     this.showTransferModal = true;
   }
 
   closeTransferModal(): void {
+    this.errores = {};
+    this.errorMessage = '';
+    this.successMessage = '';
 
     this.showTransferModal = false;
 
@@ -472,18 +505,22 @@ export class Gastos implements OnInit {
   }
 
   submitTransfer(): void {
+    this.successMessage = '';
     if (this.saving) return;
     this.errorMessage = '';
 
     const monto =
       this.newTransfer.monto;
 
-    if (
-      !this.newTransfer.nombre.trim() ||
-      !monto ||
-      !Number.isFinite(Number(monto)) ||
-      monto <= 0
-    ) {
+    this.errores = {};
+    if (!this.newTransfer.nombre.trim()) this.errores['nombre'] = 'Escribe el destinatario o servicio.';
+    if (!monto || !Number.isFinite(Number(monto)) || monto <= 0) {
+      this.errores['monto'] = 'Ingresa un monto válido mayor a 0.';
+    }
+    if (Object.keys(this.errores).length > 0) return;
+
+    if (Math.round(Number(monto) * 100) > Math.round(this.saldoDisponible * 100)) {
+      this.errorMessage = `Saldo insuficiente. Disponible: Q ${this.saldoDisponible.toFixed(2)}.`;
       return;
     }
 
@@ -503,12 +540,13 @@ export class Gastos implements OnInit {
       .subscribe({
         next: () => {
           this.saving = false;
-          this.closeTransferModal();
+          this.newTransfer = { nombre: '', monto: null, nota: '' };
+          this.mostrarExito('Pago o transferencia registrado exitosamente');
           this.changeDetector.markForCheck();
         },
         error: error => {
         this.saving = false;
-        this.errorMessage = 'No se pudo completar la operación. Inténtalo de nuevo.';
+        this.errorMessage = error.error?.error || 'No se pudo completar la operación. Inténtalo de nuevo.';
         this.changeDetector.markForCheck();
           console.error('ERROR AL GUARDAR TRANSFERENCIA:', error);
         }
