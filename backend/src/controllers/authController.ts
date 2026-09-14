@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
@@ -36,9 +37,11 @@ const createToken = (user: { id: number; username: string; email?: string | null
 // POST /api/register
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, email, password } = req.body;
+    const { password } = req.body;
+    const username = typeof req.body.username === 'string' ? req.body.username.trim() : '';
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
-    if (!username || !email || !password) {
+    if (!username || !email || typeof password !== 'string' || !password) {
       res.status(400).json({ error: 'El usuario, correo y contraseña son obligatorios' });
       return;
     }
@@ -85,9 +88,10 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 // POST /api/login (Token configurado a 2 minutos)
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, password } = req.body;
+    const { password } = req.body;
+    const username = typeof req.body.username === 'string' ? req.body.username.trim() : '';
 
-    if (!username || !password) {
+    if (!username || typeof password !== 'string' || !password) {
       res.status(400).json({ error: 'Faltan credenciales' });
       return;
     }
@@ -150,7 +154,7 @@ router.post('/google-login', async (req: Request, res: Response): Promise<void> 
       email?: string;
       email_verified?: string;
     };
-    if (profile.aud !== GOOGLE_CLIENT_ID || !profile.sub || profile.email_verified !== 'true') {
+    if (profile.aud !== GOOGLE_CLIENT_ID || !profile.sub || !profile.email || profile.email_verified !== 'true') {
       res.status(401).json({ error: 'La credencial de Google no es válida para esta aplicación' });
       return;
     }
@@ -173,8 +177,8 @@ router.post('/google-login', async (req: Request, res: Response): Promise<void> 
       user = await prisma.user.create({
         data: {
           username: databaseUsername,
-          email: profile.email ?? null,
-          password: await bcrypt.hash(`${profile.sub}:${JWT_SECRET}`, 10),
+          email: profile.email!.toLowerCase(),
+          password: await bcrypt.hash(randomBytes(32).toString('hex'), 10),
           role: 'user'
         }
       });

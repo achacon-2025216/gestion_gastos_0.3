@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, CUSTOM_ELEMENTS_SCHEMA, ElementRef, ViewChild, inject, OnInit } from '@angular/core';
+import { Component, AfterViewInit, CUSTOM_ELEMENTS_SCHEMA, DestroyRef, ElementRef, ViewChild, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
@@ -18,6 +18,8 @@ export class LoginComponent implements AfterViewInit, OnInit {
   private authService: AuthService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
+  private googleInitialized = false;
 
   logoSrc: string = 'assets/logo.png'; 
   sessionExpired: boolean = false;
@@ -37,11 +39,15 @@ export class LoginComponent implements AfterViewInit, OnInit {
   }
 
   ngAfterViewInit(): void {
+    const script = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+    const onLoad = () => this.initGoogleSignIn();
+    script?.addEventListener('load', onLoad, { once: true });
+    this.destroyRef.onDestroy(() => script?.removeEventListener('load', onLoad));
     this.initGoogleSignIn();
   }
 
   initGoogleSignIn(): void {
-    if (typeof google !== 'undefined') {
+    if (!this.googleInitialized && typeof google !== 'undefined' && google.accounts?.id) {
       google.accounts.id.initialize({
         client_id: '463867676917-g8hga9ugqt9um24hpkoakrhlrt7jjhbs.apps.googleusercontent.com',
         callback: (response: any) => this.handleGoogleCredentialResponse(response)
@@ -57,6 +63,7 @@ export class LoginComponent implements AfterViewInit, OnInit {
             // Nota: Se removió 'width: 100%' para evitar el bloqueo del SDK de Google
           }
         );
+        this.googleInitialized = true;
       }
     }
   }
@@ -79,7 +86,7 @@ export class LoginComponent implements AfterViewInit, OnInit {
         },
         error: (err) => {
           console.error('ERROR: El backend rechazó la petición o está apagado:', err);
-          this.errorMessage = 'No se pudo conectar con el servidor en el puerto 4000.';
+          this.errorMessage = err.error?.error || 'No se pudo completar el acceso con Google.';
         }
       });
 

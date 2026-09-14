@@ -193,3 +193,9 @@ nav{order:3;width:100%;justify-content:center;}nav a{min-width:0;padding:8px 14p
 .title-row{align-items:flex-start;flex-direction:column;gap:18px;}h1{font-size:28px;}
 .filters{flex-direction:column;}.filters select{width:100%;}.panel{padding:16px;}.stat-value{font-size:30px;}
 }
+
+.operation-toast { position: fixed; bottom: 24px; right: 24px; z-index: 2000; max-width: calc(100vw - 48px); padding: 16px 22px; border-radius: 12px; background: #245d59; color: white; box-shadow: 0 4px 16px #0002; }
+
+.success-message { color: #166534; background: #ecfdf3; padding: 12px; border-radius: 8px; }
+
+.field-error { color: #ef4444; font-size: 12px; margin: -4px 0 0; }
